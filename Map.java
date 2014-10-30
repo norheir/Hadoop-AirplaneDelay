@@ -15,7 +15,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.fs.Path;
 
-public class Map extends Mapper<LongWritable, Text, Text, DoubleWritable>
+public class Map extends Mapper<LongWritable, Text, Text, Text>
 {
 	public static final int COL_DS1_YEAR = 0;
 	public static final int COL_DS1_TAILNUM = 9;
@@ -102,6 +102,8 @@ public class Map extends Mapper<LongWritable, Text, Text, DoubleWritable>
 	public void map	(LongWritable key, Text value, Context context)
 					throws IOException
 	{
+		context.getCounter(Driver.CALLS_COUNTER.CALL_MAP).increment(1);
+		
 		String inputLine = value.toString();
 		String pattern = "(,\"[^\"]+),(.+\")"; // some of the field values have a , in side "" which disturbs the splitting 
 		String preprocessed = inputLine.replaceAll(pattern , "$1~$2");	   // replace , with ~ if it found in side double quotes
@@ -124,6 +126,7 @@ public class Map extends Mapper<LongWritable, Text, Text, DoubleWritable>
 				{
 					try{
 						Double d_delayMin = Double.parseDouble(s_delayMin);
+						if (d_delayMin < 0) d_delayMin = 0d;
 
 						//not interested in amount of delay, only whether the plane was delayed or not
 						//if (d_delayMin < 0) d_delayMin = 0d; //count early departures as having no delay
@@ -132,7 +135,9 @@ public class Map extends Mapper<LongWritable, Text, Text, DoubleWritable>
 						int i_age = Integer.parseInt(s_flightYear) - i_prodYear;
 						
 						if (i_age >= 0 && i_age < 100) //some sanity checks
-							context.write(new Text(Integer.toString(i_age)), new DoubleWritable(d_delayMin));
+							//context.write(new Text(Integer.toString(i_age)), new DoubleWritable(d_delayMin));
+							//context.write(new Text(Integer.toString(i_age)), new Text(d_delayMin));
+							context.write(new Text(Integer.toString(i_age)), new Text(Double.toString(d_delayMin)));
 					}
 					catch(Exception ex) {
 						ex.printStackTrace();
