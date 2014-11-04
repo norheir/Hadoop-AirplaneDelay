@@ -1,8 +1,12 @@
 import java.io.IOException;
 import java.util.*;
 import java.net.*;
+import java.io.File;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.net.URI;
 
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.JobConf;
@@ -12,7 +16,6 @@ import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.mapred.JobClient;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -29,34 +32,20 @@ public class Driver
 	};
 
 	public static void main(String[] args) throws IOException {
-		JobConf conf = new JobConf(Driver.class);
-		conf.setJobName("mean");
+		Job job = new Job();
+		
+		try{
+			
+			URI lookupFile = new URI(FileSystem.getDefaultUri(job.getConfiguration()).toString() + args[2]);
+			//System.out.println("Adding " + lookupFile.toString() + " to cache.");
+			DistributedCache.addCacheFile(lookupFile, job.getConfiguration());
+			
+		} catch(Exception ex) { ex.printStackTrace(); System.exit(-1); }
+		
+		//System.out.println("DEBUG: MAIN - Cache length= " + (DistributedCache.getCacheFiles(conf).length));
+		//System.out.print("DEBUG: MAIN - Cache length= ");
+		//System.out.println((DistributedCache.getCacheFiles(job.getConfiguration())).length);
 
-		conf.set("lookupfile", args[2]);
-		Job job = new Job(conf);
-		/*
-		conf.setMapperClass(Map.class);
-		conf.setReducerClass(Reduce.class);
-		conf.setMapOutputKeyClass(Text.class);
-		conf.setMapOutputValueClass(DoubleWritable.class);
-
-		//conf.setInputFormat(KeyValueTextInputFormat.class);
-		//conf.set("key.value.separator.in.input.line", " ");
-		conf.setOutputKeyClass(Text.class);
-		conf.setOutputValueClass(DoubleWritable.class);
-
-		//Path[] inputPaths = { new Path(args[0]), new Path[args[2]};
-		FileInputFormat.setInputPaths(conf, new Path(args[0]));
-		FileOutputFormat.setOutputPath(conf, new Path(args[1]));
-		*/
-		DistributedCache.addCacheFile(new Path(args[2]).toUri(), conf);
-
-		//JobClient.runJob(conf);
-		//new
-		/*
-		Configuration conf = new Configuration();
-		Job job = Job.getInstance(conf,"mean");
-		*/
 		job.setJarByClass(Driver.class);
 
 		//Mapper settings
@@ -65,29 +54,17 @@ public class Driver
 		job.setMapOutputValueClass(Text.class);
 
 		//Combiner and Reducer settings
-		//job.setCombinerClass(Reduce.class);
-		job.setCombinerClass(Combine.class);
+		//job.setCombinerClass(Combine.class);
 		job.setReducerClass(Reduce.class);
 		job.setOutputKeyClass(Text.class);
-		//job.setOutputValueClass(DoubleWritable.class);
 		job.setOutputValueClass(Text.class);
 
 		//conf.setInputFormat(KeyValueTextInputFormat.class);
 		//conf.set("key.value.separator.in.input.line", " ");
-		Path[] inputPaths = { new Path(args[0]), new Path(args[2])};
+		//Path[] inputPaths = { new Path(args[0]), new Path(args[2])};
 		FileInputFormat.setInputPaths(job, new Path(args[0]));
+		//FileInputFormat.setInputPaths(job, new Path(args[0]), new Path(args[2]));
 		FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
-		//job.setNumReduceTasks(0);
-		//job.setNumMapTasks(10);
-
-		//Place lookup table in distributed cache
-		try
-		{	
-			//job.addCacheFile(new URI(args[2]));
-		} catch(Exception ex) {
-			System.exit(-1);
-		}
 
 		//Wait for job to complete, and return success or failure
 		try{

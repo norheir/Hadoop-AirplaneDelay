@@ -15,20 +15,21 @@ public class Reduce	extends Reducer<Text, Text, Text, Text>
 	public void reduce	(Text key, Iterable<Text> values, Context context)
 						throws IOException
 	{	
-		context.getCounter(Driver.CALLS_COUNTER.CALL_REDUCE).increment(1);
+		//context.getCounter(Driver.CALLS_COUNTER.CALL_REDUCE).increment(1);
 		//determine whether data comes from mapper or combiner
 		try
 		{
 			double sum = 0D;
 			int count = 0;
 
-			for(Text dw : values) {
-				String s_val = dw.toString();
-				String[] s_vals = s_val.split("\\^");
-				
-				sum += Double.parseDouble(s_vals[0]);
-				count += Integer.parseInt(s_vals[1]);
-			 }
+			try{
+				for(Text dw : values)
+				{
+					sum += Double.parseDouble(dw.toString());
+					count++;
+					System.out.println("Sum=" + sum + "\t" + count);
+				 }
+			} catch (Exception ex) {}
 			
 			//context.write(key, new DoubleWritable(sum/count));
 			context.write(key, new Text(Double.toString(sum/count)));

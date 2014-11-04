@@ -1,9 +1,12 @@
 import java.io.IOException;
 import java.util.*;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.File;
 import java.net.*;
 import org.apache.hadoop.mapred.JobConf;
 
+import org.apache.hadoop.fs.*;
 import  org.apache.hadoop.filecache.*;
 import org.apache.hadoop.conf.Configuration;
 
@@ -39,18 +42,27 @@ public class Map extends Mapper<LongWritable, Text, Text, Text>
 	}
 		
 	//
-	private void loadHashMap	(Path filePath, Context context)
+	private void loadHashMap	(Context context)
 								throws IOException
 	{
-		String currentLine;
-
+		String currentLine = null;
+		FSDataInputStream fs = null;
+		
 		try
 		{
-			brReader = new BufferedReader(new FileReader(filePath.toString()));
+			URI[] cachedFiles = DistributedCache.getCacheFiles(context.getConfiguration());
+			URI filePath = cachedFiles[0];
 			
-			// Read each line, split and load to HashMap
-			brReader.readLine(); //skip first line, it being the header
-			while ((currentLine = brReader.readLine()) != null) {
+			Path src = new Path(filePath.toString());
+			//System.out.println("Path = " + src.toString());
+
+			FileSystem dfs = FileSystem.get(context.getConfiguration());
+			fs = dfs.open(src);
+
+			fs.readLine();//skip first line, it being the header
+			
+			while ((currentLine = fs.readLine())!= null)// Read each line, split and load to HashMap
+			{
 				String tailNumArray[] = currentLine.split(",");
 				
 				try
@@ -66,14 +78,16 @@ public class Map extends Mapper<LongWritable, Text, Text, Text>
 				} catch(NumberFormatException nfex)
 				{
 				}
+
 			}
-		}
+			System.out.println("DEBUG SETUP: Finished");
+			}
 		catch (Exception ex) { ex.printStackTrace(); }
 		finally
 		{
-			if (brReader != null)
+			if (fs != null)
 			{
-				brReader.close();
+				fs.close();
 			}
 
 		}
@@ -82,27 +96,19 @@ public class Map extends Mapper<LongWritable, Text, Text, Text>
 	@Override
 	//
 	protected void setup	(Context context) throws IOException,
-							InterruptedException {
-		/*
-		Path[] localPaths = DistributedCache.getLocalCacheFiles(job);
-		Path lookupTable = localPaths[0];
-		
-		URI[] localPaths = context.getCacheFiles();
-		URI lookupTable = localPaths[0];
-		*/
-		
-		Configuration conf = context.getConfiguration();
-		String inputPath = conf.get("lookupfile");
-								
-		Path lookupTable = new Path(inputPath);
-		loadHashMap(lookupTable, context);
+							InterruptedException
+	{
+		//System.out.println("DEBUG - SETUP: lookupfile=" + (context.getConfiguration()).get("lookupfile"));
+		loadHashMap(context);
 	}//end setup
 	
 	@Override
 	public void map	(LongWritable key, Text value, Context context)
 					throws IOException
 	{
-		context.getCounter(Driver.CALLS_COUNTER.CALL_MAP).increment(1);
+		//context.getCounter(Driver.CALLS_COUNTER.CALL_MAP).increment(1);
+		System.out.println("DEBUG MAP: Called");
+		
 		
 		String inputLine = value.toString();
 		String pattern = "(,\"[^\"]+),(.+\")"; // some of the field values have a , in side "" which disturbs the splitting 
@@ -113,6 +119,7 @@ public class Map extends Mapper<LongWritable, Text, Text, Text>
 
 		if (!(trimQuotes(tokens[COL_DS1_YEAR]).toLowerCase()).contains("year"))//skip header
 		{
+			System.out.println("DEBUG MAP: Not header");
 			//if (!(trimQuotes(tokens[COL_DS1_YEAR]).isEmpty()) && !tokens[COL_DS1_DELAY_MINUTES].isEmpty())
 			String s_tailNum = trimQuotes(tokens[COL_DS1_TAILNUM].trim());
 			String s_delayMin = trimQuotes(tokens[COL_DS1_DELAY_MINUTES].trim());
@@ -120,6 +127,7 @@ public class Map extends Mapper<LongWritable, Text, Text, Text>
 			
 			if (!s_tailNum.isEmpty() && !s_delayMin.isEmpty() && !s_flightYear.isEmpty())//skip if either tail number or delay is missing
 			{
+				System.out.println("DEBUG MAP: Delay and tail number present");
 				Integer i_prodYear;
 				//look up tail number in hash map
 				if ((i_prodYear = hashMap.get(s_tailNum)) != null)
@@ -146,5 +154,4 @@ public class Map extends Mapper<LongWritable, Text, Text, Text>
 			}
 		}
 	}//end map	
-		
 }//end class Map
