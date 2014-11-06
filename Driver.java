@@ -32,45 +32,74 @@ public class Driver
 	};
 
 	public static void main(String[] args) throws IOException {
-		Job job = new Job();
+		//job1: calculate average
+		Job job1 = new Job();
 		
 		try{
-			
-			URI lookupFile = new URI(FileSystem.getDefaultUri(job.getConfiguration()).toString() + args[2]);
-			//System.out.println("Adding " + lookupFile.toString() + " to cache.");
-			DistributedCache.addCacheFile(lookupFile, job.getConfiguration());
-			
+			URI lookupFile = null;
+			String defaultUri = FileSystem.getDefaultUri(job1.getConfiguration()).toString().toLowerCase();
+			System.out.println("Default URI = " + defaultUri);
+			System.out.println("Default URI contains \"file\" = " + defaultUri.contains("file"));
+			if (FileSystem.getDefaultUri(job1.getConfiguration()).toString().toLowerCase().contains("file")) {
+				lookupFile = new URI(args[2]);
+			}
+			else lookupFile = new URI(FileSystem.getDefaultUri(job1.getConfiguration()).toString() + args[2]);
+			DistributedCache.addCacheFile(lookupFile, job1.getConfiguration());
 		} catch(Exception ex) { ex.printStackTrace(); System.exit(-1); }
-		
-		//System.out.println("DEBUG: MAIN - Cache length= " + (DistributedCache.getCacheFiles(conf).length));
-		//System.out.print("DEBUG: MAIN - Cache length= ");
-		//System.out.println((DistributedCache.getCacheFiles(job.getConfiguration())).length);
 
-		job.setJarByClass(Driver.class);
+		job1.setJarByClass(Driver.class);
 
 		//Mapper settings
-		job.setMapperClass(Map.class);
-		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(Text.class);
+		job1.setMapperClass(Map.class);
+		job1.setMapOutputKeyClass(Text.class);
+		job1.setMapOutputValueClass(Text.class);
 
 		//Combiner and Reducer settings
-		//job.setCombinerClass(Combine.class);
-		job.setReducerClass(Reduce.class);
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(Text.class);
+		job1.setReducerClass(Reduce.class);
+		job1.setOutputKeyClass(Text.class);
+		job1.setOutputValueClass(Text.class);
+		//job1.setNumReduceTasks(0);
+		
+		FileInputFormat.setInputPaths(job1, new Path(args[0]));
+		FileOutputFormat.setOutputPath(job1, new Path(args[1]));
 
-		//conf.setInputFormat(KeyValueTextInputFormat.class);
-		//conf.set("key.value.separator.in.input.line", " ");
-		//Path[] inputPaths = { new Path(args[0]), new Path(args[2])};
-		FileInputFormat.setInputPaths(job, new Path(args[0]));
-		//FileInputFormat.setInputPaths(job, new Path(args[0]), new Path(args[2]));
-		FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
-		//Wait for job to complete, and return success or failure
+		//job2: calculate Pearson's correlation
+		Job job2 = new Job();
+		job2.setJarByClass(Driver.class);
+		
+		//Mapper settings
+		job2.setMapperClass(PearsonMap.class);
+		//job2.setMapOutputKeyClass(Text.class);
+		job2.setMapOutputKeyClass(NullWritable.class);
+		job2.setMapOutputValueClass(Text.class);
+		
+		//Combiner and Reducer settings
+		job2.setReducerClass(PearsonReduce.class);
+		job2.setOutputKeyClass(NullWritable.class);
+		job2.setOutputValueClass(DoubleWritable.class);
+		//job2.setNumReduceTasks(0);
+		
+		FileInputFormat.setInputPaths(job2, new Path(args[1]));
+		FileOutputFormat.setOutputPath(job2, new Path("output2"));
+		
+		//Wait for job1 to complete, and return success or failure
 		try{
-			System.exit(job.waitForCompletion(true) ? 0 : -1);
+			boolean success = true;
+			success = job1.waitForCompletion(true);
+			try{
+				success = success && job2.waitForCompletion(true);
+				
+				if (success) System.exit(0);
+				else System.exit(-1);
+				
+			} catch(Exception ex) {
+				ex.printStackTrace();
+				System.exit(-1);
+			}
+			
 		} catch (Exception ex) {
 			ex.printStackTrace();
+			System.exit(-1);
 		}
 	}
 }

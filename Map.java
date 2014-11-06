@@ -80,7 +80,7 @@ public class Map extends Mapper<LongWritable, Text, Text, Text>
 				}
 
 			}
-			System.out.println("DEBUG SETUP: Finished");
+			//System.out.println("DEBUG SETUP: Finished");
 			}
 		catch (Exception ex) { ex.printStackTrace(); }
 		finally
@@ -107,7 +107,7 @@ public class Map extends Mapper<LongWritable, Text, Text, Text>
 					throws IOException
 	{
 		//context.getCounter(Driver.CALLS_COUNTER.CALL_MAP).increment(1);
-		System.out.println("DEBUG MAP: Called");
+		//System.out.println("DEBUG MAP: Called");
 		
 		
 		String inputLine = value.toString();
@@ -119,7 +119,7 @@ public class Map extends Mapper<LongWritable, Text, Text, Text>
 
 		if (!(trimQuotes(tokens[COL_DS1_YEAR]).toLowerCase()).contains("year"))//skip header
 		{
-			System.out.println("DEBUG MAP: Not header");
+			//System.out.println("DEBUG MAP: Not header");
 			//if (!(trimQuotes(tokens[COL_DS1_YEAR]).isEmpty()) && !tokens[COL_DS1_DELAY_MINUTES].isEmpty())
 			String s_tailNum = trimQuotes(tokens[COL_DS1_TAILNUM].trim());
 			String s_delayMin = trimQuotes(tokens[COL_DS1_DELAY_MINUTES].trim());
@@ -127,14 +127,14 @@ public class Map extends Mapper<LongWritable, Text, Text, Text>
 			
 			if (!s_tailNum.isEmpty() && !s_delayMin.isEmpty() && !s_flightYear.isEmpty())//skip if either tail number or delay is missing
 			{
-				System.out.println("DEBUG MAP: Delay and tail number present");
+				//System.out.println("DEBUG MAP: Delay and tail number present");
 				Integer i_prodYear;
 				//look up tail number in hash map
 				if ((i_prodYear = hashMap.get(s_tailNum)) != null)
 				{
 					try{
 						Double d_delayMin = Double.parseDouble(s_delayMin);
-						if (d_delayMin < 0) d_delayMin = 0d;
+						//if (d_delayMin < 0) d_delayMin = 0d;
 
 						//not interested in amount of delay, only whether the plane was delayed or not
 						//if (d_delayMin < 0) d_delayMin = 0d; //count early departures as having no delay

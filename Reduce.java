@@ -27,7 +27,7 @@ public class Reduce	extends Reducer<Text, Text, Text, Text>
 				{
 					sum += Double.parseDouble(dw.toString());
 					count++;
-					System.out.println("Sum=" + sum + "\t" + count);
+					//System.out.println("Sum=" + sum + "\t" + count);
 				 }
 			} catch (Exception ex) {}
 			
